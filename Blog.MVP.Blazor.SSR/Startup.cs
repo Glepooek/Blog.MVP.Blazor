@@ -17,9 +17,12 @@ namespace Blog.MVP.Blazor.SSR
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration)
+        private readonly IWebHostEnvironment _env;
+
+        public Startup(IConfiguration configuration,IWebHostEnvironment env)
         {
             Configuration = configuration;
+            _env = env;
         }
 
         public IConfiguration Configuration { get; }
@@ -35,6 +38,7 @@ namespace Blog.MVP.Blazor.SSR
                     ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
             });
 
+            // 配置Hsts
             services.AddHsts(options =>
             {
                 options.Preload = true;
@@ -42,6 +46,16 @@ namespace Blog.MVP.Blazor.SSR
                 options.MaxAge = TimeSpan.FromDays(60);
                 options.ExcludedHosts.Add("mvp.neters.club");
             });
+
+            // 非开发环境
+            if (!_env.IsDevelopment())
+            {
+                services.AddHttpsRedirection(options =>
+                  {
+                      options.RedirectStatusCode = StatusCodes.Status308PermanentRedirect;
+                      options.HttpsPort = 443;
+                  }); 
+            }
 
             services.AddSameSiteCookiePolicy();
 
@@ -115,6 +129,7 @@ namespace Blog.MVP.Blazor.SSR
             else
             {
                 app.UseExceptionHandler("/Error");
+                app.UseHsts();
             }
 
             app.UseStaticFiles();
@@ -122,7 +137,6 @@ namespace Blog.MVP.Blazor.SSR
 
             // ******
             // BLAZOR COOKIE Auth Code (begin)
-            app.UseHsts();
             app.UseHttpsRedirection();
             app.UseCookiePolicy();
             app.UseAuthentication();
